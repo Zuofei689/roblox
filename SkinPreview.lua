@@ -1,110 +1,118 @@
---单件穿搭预览脚本，仅加入 Diwali Sparkler Headband 头饰
-print("✅ 单件穿搭脚本加载成功")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
+local P = game:GetService("Players")
+local L = P.LocalPlayer
+local G = L:WaitForChild("PlayerGui")
+local C = L.Character or L.CharacterAdded:Wait()
+local H = C:WaitForChild("Humanoid")
 
--- ======================== 饰品ID库 ========================
-local ItemList = {
-    --头发
-    Hair = {
-    },
-    --帽子/头饰
-    Hats = {
-        {Name = "Diwali Sparkler Headband", AssetID = 81550816889926},
-    },
-    --上衣
-    Shirts = {
-    },
-    --裤子
-    Pants = {
-    }
-}
--- ==========================================================
+local old = G:FindFirstChild("KnSkinUI")
+if old then old:Destroy() end
 
--- 创建UI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WearPreviewUI"
-ScreenGui.Parent = PlayerGui
+-- 圆形悬浮按钮
+local Circle = Instance.new("TextButton")
+Circle.Name = "KnSkinUI"
+Circle.Size = UDim2.new(0, 50, 0, 50)
+Circle.Position = UDim2.new(0, 20, 0.5, -25)
+Circle.BackgroundColor3 = Color3.new(0, 0, 0)
+Circle.Text = "kn"
+Circle.TextColor3 = Color3.new(1, 1, 1)
+Circle.TextSize = 18
+Circle.BorderSizePixel = 0
+Circle.Parent = G
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 300)
-MainFrame.Position = UDim2.new(0.02,0,0.3,0)
-MainFrame.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-MainFrame.Parent = ScreenGui
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = Circle
 
-local function CreateButton(name,pos,callback)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(0.9,0,0,44)
-    btn.Position = UDim2.new(0.05,0,pos,0)
-    btn.BackgroundColor3 = Color3.new(0.2,0.4,0.85)
-    btn.Text = name
-    btn.TextSize = 16
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Parent = MainFrame
-    btn.MouseButton1Click:Connect(callback)
-end
+-- 展开后的方形面板
+local Panel = Instance.new("Frame")
+Panel.Name = "Panel"
+Panel.Size = UDim2.new(0, 220, 0, 160)
+Panel.Position = UDim2.new(0.5, -110, 0.5, -80)
+Panel.BackgroundColor3 = Color3.new(0.08, 0.08, 0.08)
+Panel.Visible = false
+Panel.Parent = G
 
---穿戴饰品函数
-local function WearAccessory(assetId)
-    local success,model = pcall(function()
-        return game:GetService("InsertService"):LoadAsset(assetId)
-    end)
-    if not success then
-        warn("❌ 加载饰品失败 ID:"..assetId)
+local pCorner = Instance.new("UICorner")
+pCorner.CornerRadius = UDim.new(0, 10)
+pCorner.Parent = Panel
+
+-- 关闭叉
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.new(0, 28, 0, 28)
+Close.Position = UDim2.new(1, -34, 0, 6)
+Close.BackgroundColor3 = Color3.new(0.75, 0.15, 0.15)
+Close.Text = "×"
+Close.TextColor3 = Color3.new(1, 1, 1)
+Close.TextSize = 20
+Close.BorderSizePixel = 0
+Close.Parent = Panel
+
+local cCorner = Instance.new("UICorner")
+cCorner.CornerRadius = UDim.new(1, 0)
+cCorner.Parent = Close
+
+-- 输入框
+local Box = Instance.new("TextBox")
+Box.Size = UDim2.new(0, 190, 0, 40)
+Box.Position = UDim2.new(0, 15, 0, 45)
+Box.PlaceholderText = "输入对方 UserId"
+Box.Text = ""
+Box.ClearTextOnFocus = false
+Box.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+Box.TextColor3 = Color3.new(1, 1, 1)
+Box.Parent = Panel
+
+local bCorner = Instance.new("UICorner")
+bCorner.CornerRadius = UDim.new(0, 8)
+bCorner.Parent = Box
+
+-- 红色确定按钮
+local Confirm = Instance.new("TextButton")
+Confirm.Size = UDim2.new(0, 190, 0, 38)
+Confirm.Position = UDim2.new(0, 15, 0, 100)
+Confirm.BackgroundColor3 = Color3.new(0.8, 0.15, 0.15)
+Confirm.Text = "确定"
+Confirm.TextColor3 = Color3.new(1, 1, 1)
+Confirm.TextSize = 16
+Confirm.BorderSizePixel = 0
+Confirm.Parent = Panel
+
+local fCorner = Instance.new("UICorner")
+fCorner.CornerRadius = UDim.new(0, 8)
+fCorner.Parent = Confirm
+
+-- 圆点点击：展开
+Circle.MouseButton1Click:Connect(function()
+    Panel.Visible = true
+    Circle.Visible = false
+end)
+
+-- 叉点击：缩回圆形
+Close.MouseButton1Click:Connect(function()
+    Panel.Visible = false
+    Circle.Visible = true
+end)
+
+-- 确定：按 UserId 穿戴
+Confirm.MouseButton1Click:Connect(function()
+    local id = tonumber(Box.Text)
+    if not id then
+        warn("请输入数字 UserId")
         return
     end
-    for _,v in pairs(model:GetChildren())do
-        if v:IsA("Accessory")then
-            v.Parent = Character
-        end
+    local ok, desc = pcall(function()
+        return P:GetHumanoidDescriptionFromUserId(id)
+    end)
+    if ok and desc then
+        H:ApplyDescription(desc)
+    else
+        warn("外观加载失败，UserId 可能无效")
     end
-    model:Destroy()
-end
-
---穿衬衫裤子
-local function WearShirt(assetId)
-    local shirt = Character:FindFirstChildOfClass("Shirt") or Instance.new("Shirt")
-    shirt.Parent = Character
-    shirt.ShirtTemplate = "rbxassetid://"..assetId
-end
-local function WearPants(assetId)
-    local pants = Character:FindFirstChildOfClass("Pants") or Instance.new("Pants")
-    pants.Parent = Character
-    pants.PantsTemplate = "rbxassetid://"..assetId
-end
-
---重置角色
-local function ResetChar()
-    LocalPlayer:LoadCharacter()
-end
-
---生成按钮
-local y = 0.02
-for _,item in pairs(ItemList.Hair)do
-    CreateButton(item.Name,y,function()WearAccessory(item.AssetID)end)
-    y += 0.11
-end
-for _,item in pairs(ItemList.Hats)do
-    CreateButton(item.Name,y,function()WearAccessory(item.AssetID)end)
-    y += 0.11
-end
-for _,item in pairs(ItemList.Shirts)do
-    CreateButton(item.Name,y,function()WearShirt(item.AssetID)end)
-    y += 0.11
-end
-for _,item in pairs(ItemList.Pants)do
-    CreateButton(item.Name,y,function()WearPants(item.AssetID)end)
-    y += 0.11
-end
-CreateButton("🔄重置角色",y,ResetChar).BackgroundColor3 = Color3.new(0.7,0.15,0.15)
-
---角色刷新监听
-LocalPlayer.CharacterAdded:Connect(function(newChar)
-    Character = newChar
-    Humanoid = Character:WaitForChild("Humanoid")
 end)
-print("✅ UI创建完成，可以穿戴单件饰品自由搭配！")
+
+-- 重生后更新引用
+L.CharacterAdded:Connect(function(n)
+    task.wait(0.5)
+    C = n
+    H = C:WaitForChild("Humanoid")
+end)
