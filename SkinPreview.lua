@@ -1,80 +1,110 @@
--- LocalScript 本地皮肤预览脚本，仅客户端可视，不购买/不永久拥有物品
-print("✅ 皮肤预览脚本已加载成功")
+--单件穿搭预览脚本，仅加入 Diwali Sparkler Headband 头饰
+print("✅ 单件穿搭脚本加载成功")
 local Players = game:GetService("Players")
-local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local LocalPlayer = Players.LocalPlayer
-local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 
--- 【在这里填入你要预览的皮肤套装ID，自行扩充列表】
-local SkinList = {
-    {Name = "套装1", OutfitID = 123456},
-    {Name = "套装2", OutfitID = 789012},
-    {Name = "套装3", OutfitID = 345678}
+-- ======================== 饰品ID库 ========================
+local ItemList = {
+    --头发
+    Hair = {
+    },
+    --帽子/头饰
+    Hats = {
+        {Name = "Diwali Sparkler Headband", AssetID = 81550816889926},
+    },
+    --上衣
+    Shirts = {
+    },
+    --裤子
+    Pants = {
+    }
 }
+-- ==========================================================
 
--- 创建手机端UI界面（适配触屏）
+-- 创建UI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SkinPreviewUI"
+ScreenGui.Name = "WearPreviewUI"
 ScreenGui.Parent = PlayerGui
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0,160,0,240)
-Frame.Position = UDim2.new(0.02,0,0.3,0)
-Frame.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-Frame.BackgroundTransparency = 0.2
-Frame.Parent = ScreenGui
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 300)
+MainFrame.Position = UDim2.new(0.02,0,0.3,0)
+MainFrame.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
+MainFrame.Parent = ScreenGui
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0,8)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.Parent = Frame
+local function CreateButton(name,pos,callback)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0.9,0,0,44)
+    btn.Position = UDim2.new(0.05,0,pos,0)
+    btn.BackgroundColor3 = Color3.new(0.2,0.4,0.85)
+    btn.Text = name
+    btn.TextSize = 16
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Parent = MainFrame
+    btn.MouseButton1Click:Connect(callback)
+end
 
--- 加载套装函数：仅本地预览
-local function ApplyOutfitPreview(outfitId)
-    local success, desc = pcall(function()
-        return Players:GetHumanoidDescriptionFromOutfitIdAsync(outfitId)
+--穿戴饰品函数
+local function WearAccessory(assetId)
+    local success,model = pcall(function()
+        return game:GetService("InsertService"):LoadAsset(assetId)
     end)
     if not success then
-        warn("套装加载失败，ID错误或资源不存在")
+        warn("❌ 加载饰品失败 ID:"..assetId)
         return
     end
-    humanoid:ApplyDescription(desc)
+    for _,v in pairs(model:GetChildren())do
+        if v:IsA("Accessory")then
+            v.Parent = Character
+        end
+    end
+    model:Destroy()
 end
 
--- 重置角色回原版
-local function ResetCharacter()
-    local originalDesc = LocalPlayer:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId)
-    humanoid:ApplyDescription(originalDesc)
+--穿衬衫裤子
+local function WearShirt(assetId)
+    local shirt = Character:FindFirstChildOfClass("Shirt") or Instance.new("Shirt")
+    shirt.Parent = Character
+    shirt.ShirtTemplate = "rbxassetid://"..assetId
+end
+local function WearPants(assetId)
+    local pants = Character:FindFirstChildOfClass("Pants") or Instance.new("Pants")
+    pants.Parent = Character
+    pants.PantsTemplate = "rbxassetid://"..assetId
 end
 
--- 生成皮肤选择按钮
-for _,skinData in ipairs(SkinList) do
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0,140,0,36)
-    Btn.BackgroundColor3 = Color3.new(0.25,0.4,0.7)
-    Btn.Text = skinData.Name
-    Btn.TextSize = 14
-    Btn.TextColor3 = Color3.new(1,1,1)
-    Btn.Parent = Frame
-    Btn.MouseButton1Click:Connect(function()
-        ApplyOutfitPreview(skinData.OutfitID)
-    end)
+--重置角色
+local function ResetChar()
+    LocalPlayer:LoadCharacter()
 end
 
--- 重置按钮
-local ResetBtn = Instance.new("TextButton")
-ResetBtn.Size = UDim2.new(0,140,0,36)
-ResetBtn.BackgroundColor3 = Color3.new(0.7,0.25,0.25)
-ResetBtn.Text = "重置角色"
-ResetBtn.TextSize =14
-ResetBtn.TextColor3 = Color3.new(1,1,1)
-ResetBtn.Parent = Frame
-ResetBtn.MouseButton1Click:Connect(ResetCharacter)
+--生成按钮
+local y = 0.02
+for _,item in pairs(ItemList.Hair)do
+    CreateButton(item.Name,y,function()WearAccessory(item.AssetID)end)
+    y += 0.11
+end
+for _,item in pairs(ItemList.Hats)do
+    CreateButton(item.Name,y,function()WearAccessory(item.AssetID)end)
+    y += 0.11
+end
+for _,item in pairs(ItemList.Shirts)do
+    CreateButton(item.Name,y,function()WearShirt(item.AssetID)end)
+    y += 0.11
+end
+for _,item in pairs(ItemList.Pants)do
+    CreateButton(item.Name,y,function()WearPants(item.AssetID)end)
+    y += 0.11
+end
+CreateButton("🔄重置角色",y,ResetChar).BackgroundColor3 = Color3.new(0.7,0.15,0.15)
 
--- 角色重生自动恢复UI
+--角色刷新监听
 LocalPlayer.CharacterAdded:Connect(function(newChar)
-    task.wait(0.5)
-    character = newChar
-    humanoid = character:WaitForChild("Humanoid")
+    Character = newChar
+    Humanoid = Character:WaitForChild("Humanoid")
 end)
+print("✅ UI创建完成，可以穿戴单件饰品自由搭配！")
