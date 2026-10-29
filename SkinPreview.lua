@@ -7,6 +7,9 @@ local H = C:WaitForChild("Humanoid")
 local old = G:FindFirstChild("KnSkinUI")
 if old then old:Destroy() end
 
+-- 保存当前套用的外观描述，重生自动复用
+local savedDescription = nil
+
 -- 圆形悬浮按钮
 local Circle = Instance.new("TextButton")
 Circle.Name = "KnSkinUI"
@@ -26,8 +29,8 @@ corner.Parent = Circle
 -- 展开后的方形面板
 local Panel = Instance.new("Frame")
 Panel.Name = "Panel"
-Panel.Size = UDim2.new(0, 220, 0, 160)
-Panel.Position = UDim2.new(0.5, -110, 0.5, -80)
+Panel.Size = UDim2.new(0, 220, 0, 200)
+Panel.Position = UDim2.new(0.5, -110, 0.5, -100)
 Panel.BackgroundColor3 = Color3.new(0.08, 0.08, 0.08)
 Panel.Visible = false
 Panel.Parent = G
@@ -66,10 +69,20 @@ local bCorner = Instance.new("UICorner")
 bCorner.CornerRadius = UDim.new(0, 8)
 bCorner.Parent = Box
 
+-- 提示文本
+local Tip = Instance.new("TextLabel")
+Tip.Size = UDim2.new(0,190,0,22)
+Tip.Position = UDim2.new(0,15,0,90)
+Tip.BackgroundTransparency = 1
+Tip.Text = ""
+Tip.TextColor3 = Color3.new(1,1,1)
+Tip.TextSize =14
+Tip.Parent = Panel
+
 -- 红色确定按钮
 local Confirm = Instance.new("TextButton")
 Confirm.Size = UDim2.new(0, 190, 0, 38)
-Confirm.Position = UDim2.new(0, 15, 0, 100)
+Confirm.Position = UDim2.new(0, 15, 0, 120)
 Confirm.BackgroundColor3 = Color3.new(0.8, 0.15, 0.15)
 Confirm.Text = "确定"
 Confirm.TextColor3 = Color3.new(1, 1, 1)
@@ -97,22 +110,37 @@ end)
 Confirm.MouseButton1Click:Connect(function()
     local id = tonumber(Box.Text)
     if not id then
-        warn("请输入数字 UserId")
+        Tip.Text = "⚠️ 请输入数字 UserId"
+        task.wait(2)
+        Tip.Text = ""
         return
     end
+    Tip.Text = "🔄 正在加载..."
     local ok, desc = pcall(function()
         return P:GetHumanoidDescriptionFromUserId(id)
     end)
     if ok and desc then
-        H:ApplyDescription(desc)
+        savedDescription = desc
+        H:ApplyDescription(savedDescription)
+        Tip.Text = "✅ 外观套用成功！UGC饰品可能不显示"
     else
-        warn("外观加载失败，UserId 可能无效")
+        Tip.Text = "❌ 加载失败，UserId无效/限流"
+        warn("外观加载失败，UserId 可能无效或触发请求限制")
     end
+    task.wait(2)
+    Tip.Text = ""
 end)
 
--- 重生后更新引用
+-- 重生后更新引用，并且自动重新套用保存的外观
 L.CharacterAdded:Connect(function(n)
-    task.wait(0.5)
+    task.wait(0.3)
     C = n
     H = C:WaitForChild("Humanoid")
+    -- 如果保存了外观，重生自动应用
+    if savedDescription then
+        task.wait(0.2)
+        local applyOk,_ = pcall(function()
+            H:ApplyDescription(savedDescription)
+        end)
+    end
 end)
